@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prayer Times | أوقات الصلاة</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #10B981;
+            --card-bg-light: rgba(255, 255, 255, 0.95);
+            --card-bg-dark: rgba(30, 41, 59, 0.95);
+        }
+        
+        body.dark {
+            background-color: #0F172A;
+        }
+        
+        body.dark .card {
+            background: var(--card-bg-dark);
+            color: #E2E8F0;
+        }
+        
+        body.dark .text-gray-800 {
+            color: #E2E8F0;
+        }
+        
+        body.dark .text-gray-600 {
+            color: #94A3B8;
+        }
+        
+        .islamic-pattern-light {
+            background-color: #f8f9fa;
+            background-image: radial-gradient(circle at 0% 0%, transparent 50%, rgba(16, 185, 129, 0.1) 50%),
+                            radial-gradient(circle at 100% 0%, transparent 50%, rgba(16, 185, 129, 0.1) 50%),
+                            radial-gradient(circle at 100% 100%, transparent 50%, rgba(16, 185, 129, 0.1) 50%),
+                            radial-gradient(circle at 0% 100%, transparent 50%, rgba(16, 185, 129, 0.1) 50%);
+            background-size: 50px 50px;
+        }
+        
+        .islamic-pattern-dark {
+            background-color: #0F172A;
+            background-image: radial-gradient(circle at 0% 0%, transparent 50%, rgba(16, 185, 129, 0.05) 50%),
+                            radial-gradient(circle at 100% 0%, transparent 50%, rgba(16, 185, 129, 0.05) 50%),
+                            radial-gradient(circle at 100% 100%, transparent 50%, rgba(16, 185, 129, 0.05) 50%),
+                            radial-gradient(circle at 0% 100%, transparent 50%, rgba(16, 185, 129, 0.05) 50%);
+            background-size: 50px 50px;
+        }
+        
+        .card {
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .prayer-time {
+            transition: transform 0.3s ease;
+        }
+        
+        .prayer-time:hover {
+            transform: translateY(-5px);
+        }
+        
+        .active-prayer {
+            border-color: var(--primary-color) !important;
+            background-color: rgba(16, 185, 129, 0.1);
+        }
+        
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .lang-switch, .theme-switch {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #000000;
+        }
+
+        .lang-switch:hover, .theme-switch:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body class="islamic-pattern-light min-h-screen py-8 px-4">
+    <div class="max-w-3xl mx-auto">
+        <!-- Settings Bar -->
+        <div class="card mb-8 p-4 flex justify-between items-center">
+            <div class="flex gap-4">
+                <button onclick="toggleLanguage()" class="lang-switch bg-emerald-600 text-white px-4 py-2 rounded-lg">
+                    <span data-en="عربي" data-ar="English">عربي</span>
+                </button>
+                <button onclick="toggleTheme()" class="theme-switch bg-emerald-600 text-white px-4 py-2 rounded-lg">
+                    <span data-en="🌙 Dark Mode" data-ar="🌙 الوضع الليلي">🌙 Dark Mode</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- City Selection -->
+        <div class="card mb-8 p-6">
+            <div class="flex flex-col md:flex-row gap-4">
+                <input type="text" 
+                       id="cityInput" 
+                       value="Sale"
+                       placeholder="Enter city name | أدخل اسم المدينة" 
+                       class="flex-grow px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                <button onclick="getPrayerTimes()" 
+                        class="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
+                    <span data-en="Get Prayer Times" data-ar="عرض أوقات الصلاة">Get Prayer Times</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Date Display -->
+        <div class="card mb-8 p-6 text-center">
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <h2 class="text-xl text-gray-600" data-en="Gregorian" data-ar="ميلادي">Gregorian</h2>
+                    <p id="gregorianDate" class="text-2xl font-bold text-gray-800"></p>
+                </div>
+                <div>
+                    <h2 class="text-xl text-gray-600" data-en="Hijri" data-ar="هجري">Hijri</h2>
+                    <p id="hijriDate" class="text-2xl font-bold text-gray-800"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prayer Times Grid -->
+        <div id="prayerTimesGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Prayer times will be inserted here -->
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="hidden text-center mt-8">
+            <div class="loading inline-block w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full"></div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="hidden text-center bg-red-500 text-white p-4 rounded-lg mt-8">
+            <span data-en="Unable to fetch prayer times. Please try again." 
+                  data-ar="تعذر جلب أوقات الصلاة. يرجى المحاولة مرة أخرى.">
+                Unable to fetch prayer times. Please try again.
+            </span>
+        </div>
+    </div>
+
+    <script>
+        // Prayer names translation
+        const prayerNames = {
+            'Fajr': { en: 'Fajr', ar: 'الفجر' },
+            'Sunrise': { en: 'Sunrise', ar: 'الشروق' },
+            'Dhuhr': { en: 'Dhuhr', ar: 'الظهر' },
+            'Asr': { en: 'Asr', ar: 'العصر' },
+            'Maghrib': { en: 'Maghrib', ar: 'المغرب' },
+            'Isha': { en: 'Isha', ar: 'العشاء' }
+        };
+
+        let currentLang = 'en';
+        let isDarkTheme = false;
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'ar' : 'en';
+            document.querySelectorAll('[data-en]').forEach(element => {
+                element.textContent = element.getAttribute(`data-${currentLang}`);
+            });
+            if (currentLang === 'ar') {
+                document.body.style.direction = 'rtl';
+            } else {
+                document.body.style.direction = 'ltr';
+            }
+            getPrayerTimes(); // Refresh prayer times with new language
+        }
+
+        function toggleTheme() {
+            isDarkTheme = !isDarkTheme;
+            document.body.classList.toggle('dark');
+            document.body.classList.toggle('islamic-pattern-light');
+            document.body.classList.toggle('islamic-pattern-dark');
+        }
+
+        async function getPrayerTimes() {
+            const cityInput = document.getElementById('cityInput');
+            const city = cityInput.value.trim();
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const errorMessage = document.getElementById('errorMessage');
+            const prayerTimesGrid = document.getElementById('prayerTimesGrid');
+
+            if (!city) return;
+
+            loadingSpinner.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            prayerTimesGrid.innerHTML = '';
+
+            try {
+                const response = await fetch(`https://api.aladhan.com/v1/timingsByCity/today?city=${city}&country=Morocco`);
+                const data = await response.json();
+
+                if (data.code === 200) {
+                    updatePrayerTimes(data.data);
+                } else {
+                    throw new Error('Failed to fetch prayer times');
+                }
+            } catch (error) {
+                errorMessage.classList.remove('hidden');
+            } finally {
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        function updatePrayerTimes(data) {
+            // Update dates
+            const gregorianDate = currentLang === 'en' 
+                ? `${data.date.gregorian.weekday.en}, ${data.date.readable}`
+                : `${data.date.gregorian.weekday.ar}, ${data.date.readable}`;
+            
+            const hijriDate = currentLang === 'en'
+                ? `${data.date.hijri.weekday.en}, ${data.date.hijri.date}`
+                : `${data.date.hijri.weekday.ar}, ${data.date.hijri.date}`;
+
+            document.getElementById('gregorianDate').textContent = gregorianDate;
+            document.getElementById('hijriDate').textContent = hijriDate;
+
+            // Main prayer times to display
+            const mainPrayers = {
+                'Fajr': '🌅',
+                'Sunrise': '☀️',
+                'Dhuhr': '🌞',
+                'Asr': '🌅',
+                'Maghrib': '🌙',
+                'Isha': '🌚'
+            };
+
+            const prayerTimesGrid = document.getElementById('prayerTimesGrid');
+            prayerTimesGrid.innerHTML = '';
+
+            // Get current time
+            const now = new Date();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+
+            Object.entries(mainPrayers).forEach(([prayer, emoji]) => {
+                const time = data.timings[prayer];
+                const [hours, minutes] = time.split(':').map(Number);
+                const prayerMinutes = hours * 60 + minutes;
+                
+                const isActive = currentTime >= prayerMinutes && currentTime < prayerMinutes + 30;
+
+                const card = document.createElement('div');
+                card.className = `prayer-time card p-6 text-center border-2 ${isActive ? 'active-prayer' : 'border-transparent'}`;
+                card.innerHTML = `
+                    <div class="text-3xl mb-2">${emoji}</div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">${prayerNames[prayer][currentLang]}</h3>
+                    <p class="text-2xl font-bold text-emerald-600">${time}</p>
+                `;
+                prayerTimesGrid.appendChild(card);
+            });
+        }
+
+        // Initial load
+        getPrayerTimes();
+
+        // Allow Enter key to trigger search
+        document.getElementById('cityInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                getPrayerTimes();
+            }
+        });
+    </script>
+</body>
+</html>
